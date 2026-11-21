@@ -15,6 +15,6 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "B2.0.0")
+set(PROJECT_VER "B2.0.1")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(moink_ble)

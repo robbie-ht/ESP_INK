@@ -19,7 +19,7 @@
 #define MOINK_EVT_DISPLAY_DONE 0x01   /* arg: 0 成功 / 1 失败 / 2 清理完 / 3 缓存重刷 / 4 图库 */
 #define MOINK_EVT_BUTTON       0x02   /* arg: 1 单击 / 2 双击 / 3 长按预警 */
 #define MOINK_EVT_LOW_BATTERY  0x03   /* payload: i16 mv */
-#define MOINK_EVT_STATE        0x04   /* arg: 新状态 */
+#define MOINK_EVT_STATE        0x04   /* arg: 状态；payload: u8 gallery read flags */
 #define MOINK_EVT_TRANSFER_GAP 0x05   /* payload: u16 expected_seq */
 #define MOINK_EVT_STORE_DONE   0x06   /* arg: status; payload: slot,count,current */
 
@@ -32,6 +32,11 @@ typedef enum {
     BLE_ST_CLEARING    = 4,
     BLE_ST_SLEEPING    = 6,
 } ble_state_t;
+
+/* B2.0.1: appended to GET_STATUS and display-window STATE events. */
+#define MOINK_GALLERY_READ_SUPPORTED 0x01u
+#define MOINK_GALLERY_READ_WINDOW    0x02u
+#define MOINK_GALLERY_APPEND_COMMITTED 0x04u
 
 /* 显示作业类型 */
 typedef enum {
@@ -70,6 +75,13 @@ bool ble_api_prepare_idle_sleep(void);
 bool    ble_api_connected(void);
 uint8_t ble_api_state(void);
 void    ble_api_set_state(uint8_t st);
+
+/* display_task only: open after loading/saving, around the EPD operation only.
+ * Closing takes the host command mutex, draining any in-flight gallery read
+ * before the caller changes gallery metadata or writes the recent-frame cache.
+ * The existing refreshing/clearing state and completion events are unchanged.
+ */
+void ble_api_set_display_read_window(bool open, bool append_committed);
 
 /* 帧缓冲（长度 EPD_MAX_BUF_LEN）。上传写入它，display_task 读它。 */
 uint8_t *ble_api_frame_buf(void);

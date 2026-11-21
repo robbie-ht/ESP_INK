@@ -1,0 +1,55 @@
+Detecting the Python interpreter
+Checking "python3" ...
+Python 3.10.12
+"python3" has been detected
+Checking Python compatibility
+Checking other ESP-IDF version.
+Adding ESP-IDF tools to PATH...
+Checking if Python packages are up to date...
+Python requirements are satisfied.
+Requirement files:
+ - /opt/esp/idf/tools/requirements/requirements.core.txt
+Python being checked: /opt/esp/python_env/idf5.2_py3.10_env/bin/python
+Added the following directories to PATH:
+  /opt/esp/idf/components/espcoredump
+  /opt/esp/idf/components/partition_table
+  /opt/esp/idf/components/app_update
+  /opt/esp/tools/xtensa-esp-elf-gdb/14.2_20240403/xtensa-esp-elf-gdb/bin
+  /opt/esp/tools/riscv32-esp-elf-gdb/14.2_20240403/riscv32-esp-elf-gdb/bin
+  /opt/esp/tools/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin
+  /opt/esp/tools/riscv32-esp-elf/esp-13.2.0_20230928/riscv32-esp-elf/bin
+  /opt/esp/tools/esp32ulp-elf/2.35_20220830/esp32ulp-elf/bin
+  /opt/esp/tools/cmake/3.24.0/bin
+  /opt/esp/tools/openocd-esp32/v0.12.0-esp32-20240318/openocd-esp32/bin
+  /opt/esp/tools/qemu-xtensa/esp_develop_8.2.0_20240122/qemu/bin
+  /opt/esp/tools/qemu-riscv32/esp_develop_8.2.0_20240122/qemu/bin
+  /opt/esp/tools/xtensa-esp-elf-gdb/14.2_20240403/xtensa-esp-elf-gdb/bin
+  /opt/esp/tools/riscv32-esp-elf-gdb/14.2_20240403/riscv32-esp-elf-gdb/bin
+  /opt/esp/tools/xtensa-esp-elf/esp-13.2.0_20230928/xtensa-esp-elf/bin
+  /opt/esp/tools/riscv32-esp-elf/esp-13.2.0_20230928/riscv32-esp-elf/bin
+  /opt/esp/tools/esp32ulp-elf/2.35_20220830/esp32ulp-elf/bin
+  /opt/esp/tools/cmake/3.24.0/bin
+  /opt/esp/tools/openocd-esp32/v0.12.0-esp32-20240318/openocd-esp32/bin
+  /opt/esp/tools/qemu-xtensa/esp_develop_8.2.0_20240122/qemu/bin
+  /opt/esp/tools/qemu-riscv32/esp_develop_8.2.0_20240122/qemu/bin
+  /opt/esp/python_env/idf5.2_py3.10_env/bin
+  /opt/esp/idf/tools
+Done! You can now compile ESP-IDF projects.
+Go to the project directory and run:
+
+  idf.py build
+
+esptool.py v4.7.0
+File size: 445136 (bytes)
+Image version: 1
+Entry point: 40380250
+6 segments
+
+Segment 1: len 0x0ff9c load 0x3c050020 file_offs 0x00000018 [DROM]
+Segment 2: len 0x00054 load 0x3fc92200 file_offs 0x0000ffbc [DRAM,BYTE_ACCESSIBLE]
+Segment 3: len 0x48468 load 0x42000020 file_offs 0x00010018 [IROM]
+Segment 4: len 0x02464 load 0x3fc92254 file_offs 0x00058488 [DRAM,BYTE_ACCESSIBLE]
+Segment 5: len 0x12184 load 0x40380000 file_offs 0x0005a8f4 [IRAM]
+Segment 6: len 0x00018 load 0x50000000 file_offs 0x0006ca80 [RTC_IRAM,RTC_DRAM]
+Checksum: 40 (valid)
+Validation Hash: 4071fbb6c1a0c42a9629e358011482c23d274f21733276df6be1002485549164 (valid)

@@ -1,0 +1,18 @@
+{
+  "src/settings.c": "3776b65295bbb354a2ed6ca4f8c53978942bfdae8162e19a53d15b2dc3570286",
+  "src/settings.h": "16e48bd26028d22810b6382674c860dec7148118c2e8c641e79115467c388eda",
+  "src/store.c": "e2c03018a4f5a4c2903f9f9590f7a138f79da3df54dd11a1a56ee5068bc50256",
+  "src/cache.c": "10435ab108f84a148bacbdb7ff73b4aa8313c3f2dbb67228bc897d142729cf37",
+  "src/epd_drv.c": "3ac51dbbd1949a3d1a06201c46d4bf5c288d3a19331b7b5fbf8bc1035337bf34",
+  "src/power.c": "9169090fcb0d7a9788f30a9e44e3031245129a56f4d3833a5abb4845076e5d18",
+  "partitions.csv": "3957d676118cd03b47b6658254fad17d8efdd4f7a1556e5354cac402e22dfd21",
+  "sdkconfig.defaults": "8b19f24cfbe1c17fd6bfebdeaf1bf2b40f22ef3717d9675279203bbf89423d08",
+  "firmware/B2.0.0/README.txt": "5bceb221a5a18ed8621b290692e73c43d1e7dcacf744d8380b3b576a22242620",
+  "firmware/B2.0.0/SHA256SUMS": "4ac637166c2b7ce662614f8bd1fd02d3de9631b7550c94d3e19b90e176756e4e",
+  "firmware/B2.0.0/bootloader.bin": "307bf21e9326f67588873d42b4c863d8270032bd62d11ee9a7d740eb6737443e",
+  "firmware/B2.0.0/manifest.json": "2aa78ae6b0a8c99172cc68f27cec10e1b1eebb0fbec8ef083dd80f590bba24b3",
+  "firmware/B2.0.0/moink_B2.0.0_app.bin": "c1b37e6010c6b610d3db73a007b98c99cce7ea9b753a455a0d7d3cb0009e02c7",
+  "firmware/B2.0.0/moink_B2.0.0_merged.bin": "f293fa23d70ab968cc2d6bb0edab396d54d0cb6fd27e573563197c8425f4b356",
+  "firmware/B2.0.0/ota_data_initial.bin": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+  "firmware/B2.0.0/partition-table.bin": "4649f9d9d079fbb38ea157467a0ed813e8d0581a898b4ab901cbb40d3568988e"
+}

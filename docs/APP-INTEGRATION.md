@@ -1,7 +1,7 @@
 # APP 接入指南
 
 目标读者：要做 Android / iOS / uni-app / React Native 客户端的同学。
-协议字节级定义在 [API.md](API.md)。当前为 ESP-IDF 5.2.2 的 B2.0.0 设备固件和参考 SDK；
+协议字节级定义在 [API.md](API.md)。当前为 ESP-IDF 5.2.2 的 B2.0.1 设备固件和参考 SDK；
 本仓库没有完整 Android/iOS 手机界面工程。本文说明如何把这些能力接入手机客户端。
 
 ---
@@ -180,7 +180,7 @@ React Native 用 `react-native-ble-plx`，传输层写法同构
 | `0x01` | DISPLAY_DONE | 0 成功 / 1 失败 / 2 清理完成 / 3 缓存重刷完成 / 4 图库显示完成 | — |
 | `0x02` | BUTTON | 1 单击 / 2 双击 / 3 长按 3 s 预警（20 s 恢复出厂） | — |
 | `0x03` | LOW_BATTERY | — | `i16 mv` |
-| `0x04` | STATE | 新状态 | — |
+| `0x04` | STATE | 原状态 | B2.0.1可选u8图库只读flags；旧事件无payload |
 | `0x05` | TRANSFER_GAP | — | `u16 expected_seq` |
 | `0x06` | STORE_DONE | status，0 成功 | `slot u8, count u8, current u8`；255 表示无当前项/清空槽 |
 
@@ -274,6 +274,19 @@ B2.0.0 增加独立 1 MiB 的 8 槽图库。每项为 768×552 整帧和缩略�
 参数 `saveGallery` 不隐式开启 waitDisplay；它等待 STORE_DONE，若还要确认刷新成功，
 需同时启用 waitDisplay。仅存时没有 DISPLAY_DONE。删除/清空不改变屏幕像素，也不删 fcache。
 同时调用两个修改类操作会遇到 BUSY；UI 在一次操作完成前应禁用新的写入。
+
+B2.0.1在GET_STATUS版本字符串后兼容追加`gallery_read_flags`：bit0表示支持安全只读窗口，
+bit1表示当前窗口开放，bit2表示本窗口前已成功追加（仅FRAME save_store成功后置位）；
+STATE窗口开关事件也附同一字节，arg仍为3/4。只有idle或bit0/bit1均为1
+时发起INFO/LIST/READ，state=3不能单独作为依据。保存/加载及刷新后的current/cache写入
+不在窗口内；STORE_DONE与DISPLAY_DONE仍在原来的作业完成位置，不提前通知保存结果。
+关闭窗口会排空当前固件读取回调；客户端暂停后续分片，遇BUSY稍后继续，revision变化则丢弃
+旧部分数据。保持修改作业互斥和逐命令CTRL顺序，下载使用独立小响应缓冲，不写上传/显示帧。
+通知属性值上限512字节，READ数据上限`min(MTU-19,496)`。SDK解析新增flags，旧固件默认0；
+参考SDK仍保留原有修改作业串行机制，新增尾字段本身不代表所有客户端已开放并行调度。
+flags=7不是提前的STORE_DONE：客户端若要在自己“存并显示”的窗口中保留旧缓存，需要同会话
+pending追加、count+1、单步revision与全部旧prefix元数据一致的证据，最终回执仍须核对。
+其他显示窗口flags=3；窗口关闭/complete同时清bit1/bit2，只有支持位保留为1。
 
 ```python
 # 整帧先由 pack_2bpp() 编码；自动生成缩略图，无需 JPEG 依赖。

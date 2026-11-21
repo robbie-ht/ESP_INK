@@ -1,0 +1,151 @@
+store: gallery order, capacity, persistence, CRC, thumbnail orientation, failures and missing partition PASS
+PASS settings: persistence, atomic validation, UTF-8, GPIO, failures, reset
+cache: deduplication, CRC16 collision, geometry, corruption, interrupted writes and missing partition PASS
+BLE production parser checks passed: chunk boundary/CRC, queue retry, gallery limits, atomic settings, stale read, MTU pagination, OTA error latch, idle activity recheck
+PASS: production INFO/LIST/READ gates, status flags, window events, modifying-job BUSY
+PASS: production READ caps and real RSP encoding at 8 MTUs / 512-byte boundary
+PASS: real pthread host mutex drains an in-flight read before window close returns
+PASS: 15 actual display_task paths keep load/save/current/cache writes outside the EPD window
+CRC 金标
+  PASS  crc16(b"123456789") == 0x29B1
+  PASS  crc32(b"123456789") == 0xCBF43926
+  PASS  crc16(b'') == 0xFFFF（init 值）
+尺寸与单色整屏
+  PASS  FRAME_LEN == 105984
+  PASS  FRAME_PIXELS == 423936
+  PASS  solid_frame(黑) 全 0x00
+  PASS  solid_frame(黑) 长度
+  PASS  solid_frame(白) 全 0x55
+  PASS  solid_frame(白) 长度
+  PASS  solid_frame(黄) 全 0xAA
+  PASS  solid_frame(黄) 长度
+  PASS  solid_frame(红) 全 0xFF
+  PASS  solid_frame(红) 长度
+打包/解包往返
+  PASS  长度 == 105984
+  PASS  unpack(pack(x)) == x
+  PASS  solid_pixels 往返
+180° 契约锚点
+  PASS  图像(0,0) 落在 buf[-1] 的低 2 位
+  PASS  图像(w-1,h-1) 落在 buf[0] 的高 2 位
+  PASS  字节内 MSB 优先 == 0xE4
+  PASS  图像最后一行 -> 缓冲第一行
+与逐像素参考实现交叉验证
+  PASS  pack_2bpp == pack_ref  (8x4)
+  PASS  pack_2bpp == pack_ref  (16x7)
+  PASS  pack_2bpp == pack_ref  (32x9)
+  PASS  pack_2bpp == pack_ref  (768x3)
+参数校验
+  PASS  长度不符要报错
+  PASS  宽度非 4 倍数要报错
+  PASS  非法色码要报错
+  PASS  解包长度不符要报错
+
+ALL PASS —— 帧编码与固件契约一致
+................
+----------------------------------------------------------------------
+Ran 16 tests in 0.075s
+
+OK
+TAP version 13
+# (node:2288908) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: GET_STATUS optional gallery window flags preserve old response compatibility
+ok 1 - GET_STATUS optional gallery window flags preserve old response compatibility
+  ---
+  duration_ms: 1.154423
+  type: 'test'
+  ...
+# Subtest: gallery download caps payload at 496 even with MTU 517
+ok 2 - gallery download caps payload at 496 even with MTU 517
+  ---
+  duration_ms: 3.851353
+  type: 'test'
+  ...
+# Subtest: legacy frame wire, CRC/incomplete recovery and event before response
+ok 3 - legacy frame wire, CRC/incomplete recovery and event before response
+  ---
+  duration_ms: 0.454946
+  type: 'test'
+  ...
+# Subtest: store-only upload serializes JPEG extension and waits fast STORE_DONE
+ok 4 - store-only upload serializes JPEG extension and waits fast STORE_DONE
+  ---
+  duration_ms: 0.243208
+  type: 'test'
+  ...
+# Subtest: store failure rejects
+ok 5 - store failure rejects
+  ---
+  duration_ms: 0.468743
+  type: 'test'
+  ...
+# Subtest: persistent gap retry bounded and aborts transfer
+ok 6 - persistent gap retry bounded and aborts transfer
+  ---
+  duration_ms: 0.192337
+  type: 'test'
+  ...
+# Subtest: paged gallery list and full/thumbnail download
+ok 7 - paged gallery list and full/thumbnail download
+  ---
+  duration_ms: 0.407896
+  type: 'test'
+  ...
+# Subtest: read rejects identity/offset, empty packets, CRC and stale revision
+ok 8 - read rejects identity/offset, empty packets, CRC and stale revision
+  ---
+  duration_ms: 0.606081
+  type: 'test'
+  ...
+# Subtest: gallery show/next/delete/clear completion may arrive before response
+ok 9 - gallery show/next/delete/clear completion may arrive before response
+  ---
+  duration_ms: 0.472137
+  type: 'test'
+  ...
+# Subtest: settings name offset 21 and optional wakeShow extension
+ok 10 - settings name offset 21 and optional wakeShow extension
+  ---
+  duration_ms: 0.475259
+  type: 'test'
+  ...
+# Subtest: invalid store-only and thumbnail inputs do not send
+ok 11 - invalid store-only and thumbnail inputs do not send
+  ---
+  duration_ms: 0.17916
+  type: 'test'
+  ...
+# Subtest: OTA incomplete END recovers without restarting session
+ok 12 - OTA incomplete END recovers without restarting session
+  ---
+  duration_ms: 0.259041
+  type: 'test'
+  ...
+# Subtest: OTA persistent gap is bounded and aborts
+ok 13 - OTA persistent gap is bounded and aborts
+  ---
+  duration_ms: 0.198877
+  type: 'test'
+  ...
+# Subtest: OTA verification failure aborts
+ok 14 - OTA verification failure aborts
+  ---
+  duration_ms: 0.113095
+  type: 'test'
+  ...
+# Subtest: SLEEP_NOW busy is propagated
+ok 15 - SLEEP_NOW busy is propagated
+  ---
+  duration_ms: 0.081144
+  type: 'test'
+  ...
+1..15
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 95.994448

@@ -1,0 +1,135 @@
+store: gallery order, capacity, persistence, CRC, thumbnail orientation, failures and missing partition PASS
+PASS settings: persistence, atomic validation, UTF-8, GPIO, failures, reset
+cache: deduplication, CRC16 collision, geometry, corruption, interrupted writes and missing partition PASS
+BLE production parser checks passed: chunk boundary/CRC, queue retry, gallery limits, atomic settings, stale read, MTU pagination, OTA error latch, idle activity recheck
+CRC 金标
+  PASS  crc16(b"123456789") == 0x29B1
+  PASS  crc32(b"123456789") == 0xCBF43926
+  PASS  crc16(b'') == 0xFFFF（init 值）
+尺寸与单色整屏
+  PASS  FRAME_LEN == 105984
+  PASS  FRAME_PIXELS == 423936
+  PASS  solid_frame(黑) 全 0x00
+  PASS  solid_frame(黑) 长度
+  PASS  solid_frame(白) 全 0x55
+  PASS  solid_frame(白) 长度
+  PASS  solid_frame(黄) 全 0xAA
+  PASS  solid_frame(黄) 长度
+  PASS  solid_frame(红) 全 0xFF
+  PASS  solid_frame(红) 长度
+打包/解包往返
+  PASS  长度 == 105984
+  PASS  unpack(pack(x)) == x
+  PASS  solid_pixels 往返
+180° 契约锚点
+  PASS  图像(0,0) 落在 buf[-1] 的低 2 位
+  PASS  图像(w-1,h-1) 落在 buf[0] 的高 2 位
+  PASS  字节内 MSB 优先 == 0xE4
+  PASS  图像最后一行 -> 缓冲第一行
+与逐像素参考实现交叉验证
+  PASS  pack_2bpp == pack_ref  (8x4)
+  PASS  pack_2bpp == pack_ref  (16x7)
+  PASS  pack_2bpp == pack_ref  (32x9)
+  PASS  pack_2bpp == pack_ref  (768x3)
+参数校验
+  PASS  长度不符要报错
+  PASS  宽度非 4 倍数要报错
+  PASS  非法色码要报错
+  PASS  解包长度不符要报错
+
+ALL PASS —— 帧编码与固件契约一致
+..............
+----------------------------------------------------------------------
+Ran 14 tests in 0.014s
+
+OK
+TAP version 13
+# (node:3521900) ExperimentalWarning: Transform Types is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: legacy frame wire, CRC/incomplete recovery and event before response
+ok 1 - legacy frame wire, CRC/incomplete recovery and event before response
+  ---
+  duration_ms: 1.432005
+  type: 'test'
+  ...
+# Subtest: store-only upload serializes JPEG extension and waits fast STORE_DONE
+ok 2 - store-only upload serializes JPEG extension and waits fast STORE_DONE
+  ---
+  duration_ms: 0.280563
+  type: 'test'
+  ...
+# Subtest: store failure rejects
+ok 3 - store failure rejects
+  ---
+  duration_ms: 0.543712
+  type: 'test'
+  ...
+# Subtest: persistent gap retry bounded and aborts transfer
+ok 4 - persistent gap retry bounded and aborts transfer
+  ---
+  duration_ms: 0.298406
+  type: 'test'
+  ...
+# Subtest: paged gallery list and full/thumbnail download
+ok 5 - paged gallery list and full/thumbnail download
+  ---
+  duration_ms: 0.622885
+  type: 'test'
+  ...
+# Subtest: read rejects identity/offset, empty packets, CRC and stale revision
+ok 6 - read rejects identity/offset, empty packets, CRC and stale revision
+  ---
+  duration_ms: 0.58611
+  type: 'test'
+  ...
+# Subtest: gallery show/next/delete/clear completion may arrive before response
+ok 7 - gallery show/next/delete/clear completion may arrive before response
+  ---
+  duration_ms: 0.397924
+  type: 'test'
+  ...
+# Subtest: settings name offset 21 and optional wakeShow extension
+ok 8 - settings name offset 21 and optional wakeShow extension
+  ---
+  duration_ms: 0.33601
+  type: 'test'
+  ...
+# Subtest: invalid store-only and thumbnail inputs do not send
+ok 9 - invalid store-only and thumbnail inputs do not send
+  ---
+  duration_ms: 0.25976
+  type: 'test'
+  ...
+# Subtest: OTA incomplete END recovers without restarting session
+ok 10 - OTA incomplete END recovers without restarting session
+  ---
+  duration_ms: 0.448895
+  type: 'test'
+  ...
+# Subtest: OTA persistent gap is bounded and aborts
+ok 11 - OTA persistent gap is bounded and aborts
+  ---
+  duration_ms: 0.385998
+  type: 'test'
+  ...
+# Subtest: OTA verification failure aborts
+ok 12 - OTA verification failure aborts
+  ---
+  duration_ms: 0.194808
+  type: 'test'
+  ...
+# Subtest: SLEEP_NOW busy is propagated
+ok 13 - SLEEP_NOW busy is propagated
+  ---
+  duration_ms: 0.124837
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 104.669385

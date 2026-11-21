@@ -1,8 +1,8 @@
 /*
  * BLE 协议栈实现 —— GATT 服务 / 帧传输状态机 / 命令分发 / OTA。
  *
- * 协议权威定义：docs/API.md（改字节布局必须同步该文档与 sdk/ 两个客户端，
- * 并把 version.h 的 MOINK_API_VERSION +1）。
+ * 协议权威定义：docs/API.md（兼容尾字段同步文档与 sdk/ 两个客户端；
+ * 不兼容字节布局才把 version.h 的 MOINK_API_VERSION +1）。
  *
  * 三条特征：
  *   CTRL 6D6F496E-4B00-4000-8000-000000000001  Write/WriteNR  命令
@@ -118,6 +118,8 @@ static const char *TAG = "ble";
 #define MAX_CHUNK             512     /* = 517 MTU - 5 */
 #define MIN_CHUNK             16
 #define MAX_ATT_MTU           517
+#define MAX_ATTRIBUTE_VALUE   512
+#define MAX_GALLERY_READ      (MAX_ATTRIBUTE_VALUE - 3 - 13)
 
 /* ---------------- UUID ---------------- */
 
@@ -143,6 +145,9 @@ static uint8_t        *s_thumb;
 /* Serializes host commands, button claims, completion and timeout resets. */
 static SemaphoreHandle_t s_lock;
 static volatile uint8_t s_state = BLE_ST_IDLE;
+/* Protected by s_lock; no Flash/gallery mutation is allowed while true. */
+static bool           s_display_read_window;
+static bool           s_display_append_committed;
 static uint16_t        s_conn = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t        s_ctl_handle, s_dat_handle, s_evt_handle;
 static QueueHandle_t   s_job_q;
@@ -213,7 +218,7 @@ static uint16_t cur_mtu(void);
 /* RSP: [0x01][seq][status][payload] */
 static void respond(uint8_t seq, uint8_t status, const void *payload, uint16_t len)
 {
-    uint8_t b[MAX_ATT_MTU - 3];
+    uint8_t b[MAX_ATTRIBUTE_VALUE];
     /* Never hand NimBLE an oversized notification: return an actionable short
      * error for fixed replies that require a negotiated MTU. */
     if (len > cur_mtu() - 6 || len > sizeof(b) - 3) {
@@ -276,10 +281,47 @@ static void transfer_reset(void)
 uint8_t *ble_api_frame_buf(void) { return s_fb; }
 const uint8_t *ble_api_thumb_buf(void) { return s_thumb; }
 uint8_t  ble_api_state(void) { return s_state; }
+/* Caller holds s_lock, also held for the whole host INFO/LIST/READ callback. */
+static uint8_t gallery_read_flags(void)
+{
+    bool active = s_display_read_window &&
+        (s_state == BLE_ST_REFRESHING || s_state == BLE_ST_CLEARING);
+    return MOINK_GALLERY_READ_SUPPORTED |
+        (active ? MOINK_GALLERY_READ_WINDOW |
+            (s_display_append_committed ? MOINK_GALLERY_APPEND_COMMITTED : 0) : 0);
+}
+
+static bool gallery_read_allowed(void)
+{
+    return s_state == BLE_ST_IDLE ||
+        (gallery_read_flags() & MOINK_GALLERY_READ_WINDOW);
+}
+
+void ble_api_set_display_read_window(bool open, bool append_committed)
+{
+    if (!s_lock) return;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    bool next = open && (s_state == BLE_ST_REFRESHING || s_state == BLE_ST_CLEARING);
+    bool committed = next && append_committed;
+    bool changed = next != s_display_read_window || committed != s_display_append_committed;
+    s_display_read_window = next;
+    s_display_append_committed = committed;
+    uint8_t state = s_state;
+    uint8_t flags = gallery_read_flags();
+    xSemaphoreGive(s_lock);
+    /* Avoid nesting the NimBLE notification lock under the command mutex.
+     * display_task is the sole window owner, so open/close events stay ordered. */
+    if (changed) ble_api_notify_event(MOINK_EVT_STATE, state, &flags, 1);
+}
+
 void ble_api_set_state(uint8_t st)
 {
     if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
     s_state = st;
+    if (st != BLE_ST_REFRESHING && st != BLE_ST_CLEARING) {
+        s_display_read_window = false;
+        s_display_append_committed = false;
+    }
     if (s_lock) xSemaphoreGive(s_lock);
 }
 bool     ble_api_connected(void) { return s_conn != BLE_HS_CONN_HANDLE_NONE; }
@@ -658,7 +700,7 @@ static bool queue_carousel(uint8_t slot)
 
 static void handle_store_list(uint8_t seq, const uint8_t *a, uint16_t n)
 {
-    if (s_state != BLE_ST_IDLE) { respond(seq, ST_BUSY, NULL, 0); return; }
+    if (!gallery_read_allowed()) { respond(seq, ST_BUSY, NULL, 0); return; }
     if (n != 2 || !a[1]) { respond(seq, ST_BAD_ARG, NULL, 0); return; }
     if (!store_slots()) { respond(seq, ST_NOT_READY, NULL, 0); return; }
     int count = 0;
@@ -693,7 +735,7 @@ static void handle_store_list(uint8_t seq, const uint8_t *a, uint16_t n)
 
 static void handle_store_read(uint8_t seq, const uint8_t *a, uint16_t n)
 {
-    if (s_state != BLE_ST_IDLE) { respond(seq, ST_BUSY, NULL, 0); return; }
+    if (!gallery_read_allowed()) { respond(seq, ST_BUSY, NULL, 0); return; }
     if (n != 12 || a[1] > 1 || !rd16(a + 6)) {
         respond(seq, ST_BAD_ARG, NULL, 0); return;
     }
@@ -709,6 +751,7 @@ static void handle_store_read(uint8_t seq, const uint8_t *a, uint16_t n)
     if (!total) { respond(seq, ST_NOT_READY, NULL, 0); return; }
     if (off > total) { respond(seq, ST_BAD_ARG, NULL, 0); return; }
     uint16_t cap = cur_mtu() - 19; /* ATT 3 + RSP 3 + metadata 13 */
+    if (cap > MAX_GALLERY_READ) cap = MAX_GALLERY_READ;
     if (requested > cap) requested = cap;
     if (requested > total - off) requested = total - off;
     uint8_t r[MAX_ATT_MTU - 6];
@@ -769,6 +812,7 @@ static void on_ctrl(const uint8_t *p, uint16_t n)
         r[i++] = cache_has() ? 1 : 0;
         r[i++] = vl;
         memcpy(r + i, v, vl); i += vl;
+        r[i++] = gallery_read_flags();
         respond(seq, ST_OK, r, (uint8_t)i);
         break;
     }
@@ -825,7 +869,7 @@ static void on_ctrl(const uint8_t *p, uint16_t n)
     }
 
     case OP_STORE_INFO: {
-        if (s_state != BLE_ST_IDLE) { respond(seq, ST_BUSY, NULL, 0); break; }
+        if (!gallery_read_allowed()) { respond(seq, ST_BUSY, NULL, 0); break; }
         int count = 0, cur = -1;
         store_meta_get(&count, &cur);
         uint8_t r[7] = { count, cur < 0 ? 255 : cur, store_slots() };
@@ -1307,6 +1351,8 @@ bool ble_api_job_wait(ble_job_t *job, uint32_t timeout_ms)
 void ble_api_job_complete(void)
 {
     xSemaphoreTake(s_lock, portMAX_DELAY);
+    s_display_read_window = false;
+    s_display_append_committed = false;
     transfer_reset();
     power_activity();
     s_state = BLE_ST_IDLE;

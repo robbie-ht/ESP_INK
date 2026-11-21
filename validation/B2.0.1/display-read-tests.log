@@ -1,0 +1,4 @@
+PASS: production INFO/LIST/READ gates, status flags, window events, modifying-job BUSY
+PASS: production READ caps and real RSP encoding at 8 MTUs / 512-byte boundary
+PASS: real pthread host mutex drains an in-flight read before window close returns
+PASS: 15 actual display_task paths keep load/save/current/cache writes outside the EPD window

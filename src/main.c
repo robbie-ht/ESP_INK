@@ -97,6 +97,28 @@ static uint8_t storage_status(esp_err_t err)
     return 0x0b;
 }
 
+/* The shared upload/display frame remains immutable for this whole operation.
+ * Gallery reads use their own small response buffer. Close the window before
+ * any post-display NVS/current/cache writes, including all failure paths. */
+static int display_with_gallery_reads(const uint8_t *buf, uint16_t w, uint16_t h,
+                                     bool append_committed)
+{
+    ble_api_set_display_read_window(true, append_committed);
+    int result = epd_display_2bpp_wh(buf, w, h);
+    if (result == 0) epd_panel_deep_sleep();
+    ble_api_set_display_read_window(false, false);
+    return result;
+}
+
+static int clear_with_gallery_reads(int cycles)
+{
+    ble_api_set_display_read_window(true, false);
+    int result = epd_clear_cycles(cycles);
+    if (result == 0) epd_panel_deep_sleep();
+    ble_api_set_display_read_window(false, false);
+    return result;
+}
+
 static void display_task(void *arg)
 {
     (void)arg;
@@ -121,8 +143,7 @@ static void display_task(void *arg)
             }
             display_event = !job.no_show;
             if (!job.no_show && store_err == ESP_OK &&
-                epd_display_2bpp_wh(buf, job.w, job.h) == 0) {
-                epd_panel_deep_sleep();
+                display_with_gallery_reads(buf, job.w, job.h, job.save_store != 0) == 0) {
                 result = 0;
                 if (job.save_store) store_err = store_set_current(slot);
                 else if (store_slots() && store_set_current(-1) != ESP_OK) {
@@ -143,8 +164,7 @@ static void display_task(void *arg)
                 slot = count ? (current + 1) % count : -1;
             }
             if (store_load_frame(slot, buf, EPD_MAX_BUF_LEN, &w, &h) == ESP_OK &&
-                epd_display_2bpp_wh(buf, w, h) == 0) {
-                epd_panel_deep_sleep();
+                display_with_gallery_reads(buf, w, h, false) == 0) {
                 if (store_set_current(slot) == ESP_OK) result = 4;
                 if (settings_get()->cache_on &&
                     cache_save(buf, w, h, crc16_of(buf, (uint32_t)(w / 4) * h)) != ESP_OK)
@@ -158,8 +178,7 @@ static void display_task(void *arg)
         } else if (job.type == BLE_JOB_CACHE) {
             uint16_t w = 0, h = 0, crc = 0;
             if (cache_load(buf, EPD_MAX_BUF_LEN, &w, &h, &crc) == ESP_OK &&
-                epd_display_2bpp_wh(buf, w, h) == 0) {
-                epd_panel_deep_sleep();
+                display_with_gallery_reads(buf, w, h, false) == 0) {
                 result = 3;
                 if (store_slots() && store_set_current(-1) != ESP_OK) {
                     result = 1;
@@ -167,8 +186,7 @@ static void display_task(void *arg)
                 }
             }
         } else if (job.type == BLE_JOB_CLEAR) {
-            if (epd_clear_cycles(job.cycles) == 0) {
-                epd_panel_deep_sleep();
+            if (clear_with_gallery_reads(job.cycles) == 0) {
                 result = 2;
                 if (store_slots() && store_set_current(-1) != ESP_OK) {
                     result = 1;

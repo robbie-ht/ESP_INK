@@ -18,6 +18,7 @@ class MockTransport implements BleTransport {
   oldSettings = false;
   sleepBusy = false;
   flags = 0;
+  statusFlags: number | undefined;
   async connect() {}
   async disconnect() {}
   onNotify(cb: (data: Uint8Array) => void) { this.callback = cb; }
@@ -76,6 +77,12 @@ class MockTransport implements BleTransport {
       this.event(EVT.DISPLAY_DONE, 4); this.rsp(seq);
     } else if ([OP.CAROUSEL_DELETE, OP.CAROUSEL_CLEAR].includes(op as any)) {
       this.event(EVT.STORE_DONE, this.storeError, new Uint8Array([a[0] ?? 255, 1, 0])); this.rsp(seq);
+    } else if (op === OP.GET_STATUS) {
+      const version = new TextEncoder().encode('B2.0.1');
+      const p = new Uint8Array(27 + version.length + (this.statusFlags === undefined ? 0 : 1));
+      p[0] = 1; p[1] = 3; p[26] = version.length; p.set(version, 27);
+      if (this.statusFlags !== undefined) p[p.length - 1] = this.statusFlags;
+      this.rsp(seq, p);
     } else if (op === OP.GET_SETTINGS) {
       const name = new TextEncoder().encode('墨印');
       const p = new Uint8Array(21 + name.length + (this.oldSettings ? 0 : 1));
@@ -91,6 +98,28 @@ class MockTransport implements BleTransport {
 }
 
 function setup() { const t = new MockTransport(); return { t, cli: new MoinkBle(t) }; }
+
+test('GET_STATUS optional gallery window flags preserve old response compatibility', async () => {
+  const { t, cli } = setup();
+  const old = await cli.getStatus();
+  assert.equal(old.version, 'B2.0.1'); assert.equal(old.galleryReadFlags, 0);
+  assert.equal(old.galleryReadSupported, false);
+  for (const flags of [1, 3, 7]) {
+    t.statusFlags = flags; const status = await cli.getStatus();
+    assert.equal(status.galleryReadFlags, flags); assert.equal(status.galleryReadSupported, true);
+    assert.equal(status.galleryReadWindow, (flags & 2) !== 0);
+    assert.equal(status.galleryAppendCommitted, (flags & 4) !== 0);
+  }
+});
+
+test('gallery download caps payload at 496 even with MTU 517', async () => {
+  const { t, cli } = setup(); t.mtu = 517;
+  t.frame = Uint8Array.from({ length: 1024 }, (_, i) => i & 255);
+  assert.deepEqual(await cli.galleryDownload(0), t.frame);
+  const requests = t.commands.filter(([op]) => op === OP.CAROUSEL_READ)
+    .map(([, a]) => new DataView(a.buffer, a.byteOffset, a.byteLength).getUint16(6, true));
+  assert.equal(Math.max(...requests), 496); assert.ok(requests.every((n) => n > 0 && n <= 496));
+});
 
 test('legacy frame wire, CRC/incomplete recovery and event before response', async () => {
   const { t, cli } = setup(); t.endStatuses = [ST.INCOMPLETE, ST.CRC, ST.OK];

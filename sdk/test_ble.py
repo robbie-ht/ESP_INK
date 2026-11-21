@@ -21,6 +21,7 @@ class MockBle:
         self.abort_count = 0
         self.old_settings = False
         self.sleep_busy = False
+        self.status_flags = None
 
     def rsp(self, seq, payload=b'', status=ST_OK):
         self.cli._on_notify(0, bytearray([1, seq, status]) + payload)
@@ -89,6 +90,15 @@ class MockBle:
         elif op == OP_CAROUSEL_SHOW:
             self.event(EVT_DISPLAY_DONE, 4)
             self.rsp(seq)
+        elif op == OP_GET_STATUS:
+            payload = bytearray(27)
+            payload[0] = 1
+            payload[1] = 3
+            payload[26] = len(b'B2.0.1')
+            payload.extend(b'B2.0.1')
+            if self.status_flags is not None:
+                payload.append(self.status_flags)
+            self.rsp(seq, payload)
         elif op == OP_GET_SETTINGS:
             name = '墨印'.encode()
             payload = struct.pack('<BIBIB8sBB', 0, 180, 0, 3600, 0, bytes(range(8)), 1, len(name)) + name
@@ -105,6 +115,28 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.mock = MockBle()
         self.cli = self.mock.cli
+
+    async def test_status_optional_gallery_window_flags(self):
+        old = await self.cli.get_status()
+        self.assertEqual(old['version'], 'B2.0.1')
+        self.assertEqual(old['gallery_read_flags'], 0)
+        self.assertFalse(old['gallery_read_supported'])
+        for flags in (1, 3, 7):
+            self.mock.status_flags = flags
+            status = await self.cli.get_status()
+            self.assertEqual(status['gallery_read_flags'], flags)
+            self.assertTrue(status['gallery_read_supported'])
+            self.assertEqual(status['gallery_read_window'], bool(flags & 2))
+            self.assertEqual(status['gallery_append_committed'], bool(flags & 4))
+
+    async def test_gallery_read_496_cap_with_mtu_517(self):
+        self.cli.mtu = 517
+        self.mock.frame = bytes(range(256)) * 4
+        self.assertEqual(await self.cli.gallery_download(0), self.mock.frame)
+        requests = [struct.unpack_from('<H', args, 6)[0]
+                    for op, args in self.mock.commands if op == OP_CAROUSEL_READ]
+        self.assertEqual(max(requests), 496)
+        self.assertTrue(all(0 < n <= 496 for n in requests))
 
     async def test_upload_legacy_wire_and_retry(self):
         self.mock.end_statuses = [ST_INCOMPLETE, ST_CRC, ST_OK]

@@ -315,6 +315,11 @@ class MoinkClient:
         out["auto_wake_s"] = struct.unpack_from("<I", pl, o)[0]; o += 4
         out["cache_valid"] = bool(pl[o]); o += 1
         out["version"] = pl[o + 1:o + 1 + pl[o]].decode("utf-8", "replace")
+        end = o + 1 + pl[o]
+        out["gallery_read_flags"] = pl[end] if len(pl) > end else 0
+        out["gallery_read_supported"] = bool(out["gallery_read_flags"] & 1)
+        out["gallery_read_window"] = bool(out["gallery_read_flags"] & 2)
+        out["gallery_append_committed"] = bool(out["gallery_read_flags"] & 4)
         return out
 
     async def get_settings(self) -> dict:
@@ -552,7 +557,7 @@ class MoinkClient:
         kind = int(thumbnail)
         data = bytearray()
         while len(data) < total:
-            requested = min(max(1, self.mtu - 19), total - len(data), 65535)
+            requested = min(max(1, self.mtu - 19), 496, total - len(data))
             args = struct.pack("<BBIHI", slot, kind, len(data), requested, item["revision"])
             p = await self._call(OP_CAROUSEL_READ, args)
             if len(p) < 14:

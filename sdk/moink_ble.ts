@@ -304,6 +304,10 @@ export interface StatusInfo {
   autoWakeS: number;
   cacheValid: boolean;
   version: string;
+  galleryReadFlags: number;
+  galleryReadSupported: boolean;
+  galleryReadWindow: boolean;
+  galleryAppendCommitted: boolean;
 }
 
 export interface SettingsInfo {
@@ -495,6 +499,7 @@ export class MoinkBle {
     const dv = new DataView(p.buffer, p.byteOffset, p.byteLength);
     const battery = dv.getInt16(3, true);
     const vl = p[26];
+    const galleryReadFlags = p[27 + vl] ?? 0;
     return {
       api: p[0],
       state: STATE_NAME[p[1]] ?? String(p[1]),
@@ -509,6 +514,10 @@ export class MoinkBle {
       autoWakeS: dv.getUint32(21, true),
       cacheValid: p[25] === 1,
       version: new TextDecoder().decode(p.slice(27, 27 + vl)),
+      galleryReadFlags,
+      galleryReadSupported: (galleryReadFlags & 1) !== 0,
+      galleryReadWindow: (galleryReadFlags & 2) !== 0,
+      galleryAppendCommitted: (galleryReadFlags & 4) !== 0,
     };
   }
 
@@ -712,7 +721,7 @@ export class MoinkBle {
     const kind = thumbnail ? 1 : 0, data = new Uint8Array(total);
     let offset = 0;
     while (offset < total) {
-      const requested = Math.min(Math.max(1, this.mtu - 19), total - offset, 65535);
+      const requested = Math.min(Math.max(1, this.mtu - 19), 496, total - offset);
       const args = new Uint8Array(12), ad = new DataView(args.buffer);
       args[0] = slot; args[1] = kind; ad.setUint32(2, offset, true);
       ad.setUint16(6, requested, true); ad.setUint32(8, item.revision, true);

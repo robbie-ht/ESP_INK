@@ -1,8 +1,15 @@
-# MoInk · APP / BLE 固件 B2.0.0
+# MoInk · APP / BLE 固件 B2.0.1
 
 本工程是 **ESP32-C3 上供手机 APP 连接的 BLE 固件**，附 Python / TypeScript 接入 SDK。使用 **ESP-IDF 5.2.2**，以同级 `moink-R1.3.4` 为只读功能参考；不是 Android/iOS 界面工程。
 
 B2.0.0 补齐设备内图库与离线轮播。控制通道仍为 BLE，图像合成留在手机端。
+
+B2.0.1新增物理刷屏期间的图库安全只读窗口：保存/加载完成后开放，刷屏及面板深睡结束后、
+任何图库current/NVS/cache写入前关闭并排空在途读取。GET_STATUS尾字段与STATE事件报告
+支持位、当前窗口及本窗口前已成功追加标志（flags1/3/7），状态码、
+STORE_DONE/DISPLAY_DONE时序、分区和已有NVS均不改变。
+所有修改操作仍互斥，READ数据最多496字节，通知属性值最多512字节。客户端也需配合新的
+读取调度；该源码修改和离线验证不代表已刷入设备或通过真实BLE与刷屏并发验收。
 
 | 项目 | 当前实现 |
 |---|---|
@@ -35,6 +42,14 @@ B2.0.0 补齐设备内图库与离线轮播。控制通道仍为 BLE，图像合
 | 网页裁剪、滤镜、文字、拍立得/便签 UI | 原版运行在浏览器 | 手机界面仍需独立 APP 工程；本目录不包含该工程 |
 
 **实际源码优先于旧 README**：R1.3.4 的 A1 800×600 诊断档已删除，本工程不恢复该旧档位。两种屏都接受 105,984 B 的 768×552 帧，色码和 180° 打包契约保持不变。
+
+## 固件下载
+
+当前源码为 **B2.0.1**，下载入口：[B2.0.1 Release](https://github.com/robbie-ht/ESP_INK/releases/tag/B2.0.1)。设备固件源码和发布文件由本仓库维护；手机APP位于 [ESP-INK-for-Andriod](https://github.com/robbie-ht/ESP-INK-for-Andriod)。刷屏期间读取图库需配合APP 1.0.7或更新的兼容版本。
+
+已有B2分区的设备使用 `moink_B2.0.1_app.bin` 走BLE OTA，无需擦除图库或恢复设置。`moink_B2.0.1_merged.bin` 是4MiB全量镜像，不能当作OTA应用使用；R/B1分区不兼容，需按迁移说明处理。附件包含5个bin、manifest、SHA256SUMS和使用说明；GitHub同时提供此tag的完整源码下载。
+
+本版已通过离线回归、ESP-IDF 5.2.2编译及镜像核验，尚未进行真实BLE/面板并行验收；详见[验证记录](validation/B2.0.1/RESULTS.md)。
 
 ## 编译
 
@@ -97,7 +112,7 @@ await cli.gallery_delete(0)
 
 ## 验证与硬件边界
 
-本轮 ESP-IDF 5.2.2 已编译成功；最终构建和测试记录见 [validation/RESULTS.md](validation/RESULTS.md)。存储、设置、协议与 SDK 使用主机模拟进行错误注入和离线检查，**不等于真机验收**。
+本轮B2.0.1 ESP-IDF 5.2.2已编译、打包成功，见[本版记录](validation/B2.0.1/RESULTS.md)及[固件清单](firmware/B2.0.1/manifest.json)；[validation/RESULTS.md](validation/RESULTS.md)保留历史记录。存储、设置、协议与SDK使用主机模拟进行错误注入和离线检查，**不等于真机验收**。
 
 未验证：真实 BLE 连接/吞吐/断连重连，A0/A1 面板、GPIO 自锁、深睡电流与定时唤醒、实际 Flash 掉电、OTA 回滚。第一次上机应依次检查扫描连接、单色帧、图库/按键/定时轮播、断连恢复、OTA，不把旧 R1.3.4 的硬件结果当作新 BLE 版验收。
 

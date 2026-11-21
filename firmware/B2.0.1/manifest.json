@@ -1,0 +1,40 @@
+{
+  "firmware": "B2.0.1",
+  "api": 1,
+  "idf": "5.2.2",
+  "target": "esp32c3",
+  "variant": "integrated-board",
+  "default_gpio_preset": 2,
+  "default_pins": {
+    "ADC": 0,
+    "WAKE": 1,
+    "SCK": 4,
+    "MOSI": 3,
+    "CS": 5,
+    "DC": 6,
+    "RST": 7,
+    "BUSY": 10
+  },
+  "existing_valid_nvs_preserved_on_app_ota": true,
+  "full_erase_or_merged_flash_preserves_data": false,
+  "gallery_read_flags": {
+    "supported": 1,
+    "window_open": 2,
+    "append_committed": 4
+  },
+  "flash_bytes": 4194304,
+  "ota_slot_bytes": 1441792,
+  "app_bytes": 445136,
+  "usb_migration_required_from": [
+    "R series",
+    "B1.0.0"
+  ],
+  "hardware_tested": false,
+  "sha256": {
+    "bootloader.bin": "307bf21e9326f67588873d42b4c863d8270032bd62d11ee9a7d740eb6737443e",
+    "moink_B2.0.1_app.bin": "1cadab640ee3e09e268f604f1614dbbeeda9d9321b31d647a3fa25036bad2f26",
+    "moink_B2.0.1_merged.bin": "b70146d2c589049884001289db6da8c8a2d3febf0c46fe7cd5d9f9a8d1b97db2",
+    "ota_data_initial.bin": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+    "partition-table.bin": "4649f9d9d079fbb38ea157467a0ed813e8d0581a898b4ab901cbb40d3568988e"
+  }
+}

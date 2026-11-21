@@ -2,7 +2,7 @@
 
 > 本文档是 **APP 与固件之间的唯一权威接口定义**。固件实现见 `src/ble_api.c`，
 > 参考客户端见 `sdk/moink_ble.py`（Python）与 `sdk/moink_ble.ts`（TypeScript）。
-> 当前固件 B2.0.0，ESP-IDF 5.2.2。不兼容的字节布局变更才增加 `MOINK_API_VERSION`；
+> 当前固件 B2.0.1，ESP-IDF 5.2.2。不兼容的字节布局变更才增加 `MOINK_API_VERSION`；
 > 本次新增命令、TLV 和可选末尾字段，api 保持 1。分区变化需要首次完整串口刷入，见 README。
 
 ---
@@ -145,6 +145,18 @@ RSP payload：
 | 25 | u8 | cache_valid | 1 = fcache 里有可用帧 |
 | 26 | u8 | fw_len | |
 | 27 | u8[] | fw | ASCII |
+| 27 + fw_len | u8 | gallery_read_flags | B2.0.1兼容尾字段：bit0=支持刷屏只读窗口，bit1=窗口当前开放，bit2=本窗口前已成功追加；旧固件缺省0 |
+
+状态码保持原定义。state=3/4本身不代表可以读图；仅idle或flags bit0/bit1均为1时允许
+CAROUSEL_INFO/LIST/READ。窗口在保存/加载完成后、调用屏驱动前开放，覆盖刷新重试和面板深睡；
+任何后续current/NVS/cache写入前先关闭，并等待正在处理的读取响应退出。新上传、删除、清空、
+设置、OTA等修改操作仍只能在idle开始。客户端需兼容缺失尾字段及没有payload的旧STATE事件。
+
+bit2只在FRAME的save_store成功后、进入实际刷屏窗口时置1（flags=7）；图库显示、缓存重刷、
+清残影窗口flags=3，关闭窗口或作业完成后清除bit1/bit2（flags=1）。该位不替代STORE_DONE，
+也不携带slot、count或current。APP只有确认是自己同会话正在等待的追加，并逐项验证旧列表
+前缀、count+1与单步revision后，才能在窗口中迁移旧图片缓存；最终仍核对STORE_DONE，异常
+必须撤销推定。仅存图库不打开刷屏窗口。
 
 ### 6.3 `0x03` GET_SETTINGS
 
@@ -362,11 +374,14 @@ RSP 载荷：
 | 12 | u8 | format：1 packed2bpp / 2 JPEG（整帧固定为 1） |
 | 13 | u8[] | data |
 
-单片 data 最多 `MTU-19` 字节，由设备裁决（MTU=23 时 4 字节）。
+单片 data 最多 `min(MTU-19,496)` 字节，由设备裁决（MTU=23 时 4 字节）；
+RSP含3字节头与13字节元数据，整个属性值不超过512字节，即使MTU=517。
 **数据通过 EVT 的 RSP 返回，DATA 特征仍然只写入，不支持 Notify。**
 客户端逐片检查 slot/kind/offset/total/CRC/format，直到 offset=total，再校验整个载荷 CRC16。
 相同偏移可安全重读；版本变化返回 `STALE`，应丢弃部分下载，刷新列表后从头读取，
-不可拼接新旧图库内容。READ 不持有跨命令锁。图库命令在上传/刷屏/存储/OTA 忙时返回 BUSY。
+不可拼接新旧图库内容。READ不持有跨命令锁。INFO/LIST/READ仅在idle或明确开放的物理刷屏
+只读窗口可用；上传、存储、OTA及关闭窗口的刷新阶段返回BUSY。窗口在分片之间关闭时，
+客户端暂停后续读取，等待重新开放或idle后继续，并继续检查revision，不把BUSY当成损坏。
 
 ## 7. 状态码
 
@@ -397,7 +412,7 @@ RSP 载荷：
 | `0x01` | DISPLAY_DONE | result | — | 0 刷屏成功 / 1 刷屏失败 / 2 清理完成 / 3 缓存重刷成功 / 4 图库显示成功 |
 | `0x02` | BUTTON | action | — | 1 单击 / 2 双击 / 3 长按预警（距恢复出厂 3 s） |
 | `0x03` | LOW_BATTERY | 0 | `i16 mv` | 电量低于阈值（约 3400 mV，每次唤醒最多一次） |
-| `0x04` | STATE | state | — | 状态变化（可与 `GET_STATUS` 交叉验证） |
+| `0x04` | STATE | state | 可选 `u8 gallery_read_flags` | B2.0.1窗口开关通知，arg仍为原3/4状态；也可与GET_STATUS交叉验证，旧事件可无payload |
 | `0x05` | TRANSFER_GAP | 0 | `u16 expected_seq` | 收到乱序 DATA，需回退重发 |
 | `0x06` | STORE_DONE | status | `slot u8, count u8, current u8` | 保存/删除/清空的结果；0 成功，失败用 §7 状态码；清空 slot=255，current=255 表示无当前项 |
 

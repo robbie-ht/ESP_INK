@@ -39,6 +39,8 @@ static uint16_t s_fw,s_fh,s_expect,s_chunk,s_crc_calc,s_crc_want,s_thumb_w,s_thu
 static uint32_t s_framelen,s_recv,s_thumb_len,s_ota_total,s_ota_written,s_ota_erased,s_ota_crc_calc;
 static uint8_t s_begin_flags,s_thumb_format,s_ota_err;
 static bool s_gap_notified;
+static bool s_display_read_window;
+static bool s_display_append_committed;
 static void *s_ota_part,*s_job_q;
 static void *s_lock=(void*)1;
 static bool idle_expired;
@@ -77,8 +79,8 @@ esp_err_t settings_apply(const moink_settings_t*p){applied++;if(apply_error==ESP
 static void epd_set_panel(epd_panel_t panel){(void)panel;}
 void ble_api_restart_adv(void){}
 '''
-defines='\n'.join(x for x in src.splitlines() if re.match(r'#define (?:ST_|TLV_|MAX_ATT_MTU|MIN_CHUNK|EVT_TRANSFER_GAP)',x))
-body='\n\n'.join(fn(n) for n in ['rd16','rd32','wr16','wr32','transfer_reset','handle_frame_begin','handle_frame_end','handle_set_settings','store_status','handle_store_list','handle_store_read','on_data','ble_api_prepare_idle_sleep'])
+defines='\n'.join(x for x in src.splitlines() if re.match(r'#define (?:ST_|TLV_|MAX_ATT_MTU|MAX_ATTRIBUTE_VALUE|MAX_GALLERY_READ|MIN_CHUNK|EVT_TRANSFER_GAP)',x))
+body='\n\n'.join(fn(n) for n in ['rd16','rd32','wr16','wr32','gallery_read_flags','gallery_read_allowed','transfer_reset','handle_frame_begin','handle_frame_end','handle_set_settings','store_status','handle_store_list','handle_store_read','on_data','ble_api_prepare_idle_sleep'])
 main=r'''
 int main(void){
  uint8_t image[32],thumb[4]={0,1,2,3},begin[24]={6},data[20]={0};
