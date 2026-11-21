@@ -1,0 +1,90 @@
+# MoInk BLE firmware - sdkconfig defaults
+# Target: ESP-IDF 5.2.2 / ESP32-C3 / 4 MB flash
+#
+#   idf.py build            (CONFIG_IDF_TARGET is declared below, no set-target needed)
+#   idf.py -p COM9 flash monitor
+#
+# ASCII ONLY. kconfgen reads this file with the console code page (GBK on a
+# Chinese Windows), so a UTF-8 Chinese comment here aborts the build with
+# UnicodeDecodeError. Same rule for partitions.csv and every CMakeLists.txt.
+#
+# Production profile: logs at ERROR, skip image validation on deep-sleep wake,
+# single BLE connection with 517 MTU. For debugging set the LOG lines back to
+# INFO (then `idf.py menuconfig` + save; this file only seeds the defaults).
+
+# ---- target ----
+CONFIG_IDF_TARGET="esp32c3"
+
+# ---- flash: keep the already-validated DIO 40 MHz ----
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_40M=y
+
+# ---- console on the C3 built-in USB-Serial-JTAG (GPIO18/19) ----
+# If your board uses a CH343/CP2102 bridge, drop the next two lines and use
+# CONFIG_ESP_CONSOLE_UART_DEFAULT=y instead.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# ---- logging: ERROR in production ----
+CONFIG_LOG_DEFAULT_LEVEL_ERROR=y
+CONFIG_LOG_DEFAULT_LEVEL=1
+
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# ---- WiFi unused ----
+# ESP-IDF 5.2 has no CONFIG_ESP_WIFI_ENABLED switch (that component-trim option
+# is 6.x only). Simply never call esp_wifi_init(): that costs no RAM and no RF
+# time; the price is a ~300 KB esp_wifi static library still linked into the
+# image. Both OTA slots are 1.375 MB, so that is fine.
+
+# ---- BLE: NimBLE host, peripheral + broadcaster only ----
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+# CONFIG_BT_NIMBLE_ROLE_CENTRAL is not set
+# CONFIG_BT_NIMBLE_ROLE_OBSERVER is not set
+
+# 517 MTU: ~512 B payload per packet, a 106 KB frame is about 210 packets
+CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=517
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_EXT_ADV=n
+
+# No pairing/bonding: open NoInputNoOutput, no pairing popup in the app
+CONFIG_BT_NIMBLE_NVS_PERSIST=n
+CONFIG_BT_NIMBLE_SECURITY_ENABLE=n
+
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=4096
+CONFIG_BT_NIMBLE_L2CAP_COC_MAX_NUM=0
+
+# Buffers for 517 MTU: the 5.2.2 defaults are already enough, so nothing is
+# overridden here. Values measured in the generated sdkconfig of this C3 build:
+#   CONFIG_BT_NIMBLE_MSYS_1_BLOCK_COUNT          = 12   (12 x 256 B = 3 KB)
+#   CONFIG_BT_NIMBLE_TRANSPORT_ACL_FROM_LL_COUNT = 24
+#   CONFIG_BT_NIMBLE_TRANSPORT_ACL_SIZE          = 255
+#   CONFIG_BT_NIMBLE_TRANSPORT_EVT_COUNT         = 30
+# 12 is the !SOC_ESP_NIMBLE_CONTROLLER default: a C3 runs the ESP32 BT
+# controller, not the NimBLE one, so MSYS_1 stays at 12 blocks. That is enough
+# here because our notifications are <= 72 B and the 106 KB frame arrives as ATT
+# writes (decoded in place), never as msys mbuf chains.
+#
+# The names NIMBLE_ACL_BUF_COUNT / MSYS1_BLOCK_COUNT / HCI_EVT_*_BUF_COUNT exist
+# only in components/bt/sdkconfig.rename. kconfgen re-emits them into sdkconfig
+# as deprecated aliases, so seeing them there is normal and is not from this file.
+
+# ---- custom partition table: two 1.375 MB OTA slots + 1 MB gallery + 192 KB frame cache ----
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# ---- OTA rollback: unconfirmed new image rolls back after 45 s ----
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# ---- faster boot (skip the second image check on deep-sleep wake only) ----
+CONFIG_BOOTLOADER_SKIP_VALIDATE_IN_DEEP_SLEEP=y
+CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=y
+CONFIG_BOOTLOADER_LOG_LEVEL=1
+
+# ---- timer wake accuracy: internal RC slow clock, calibration cycles 1024 ----
+CONFIG_RTC_CLK_SRC_INT_RC=y
+CONFIG_RTC_CLK_CAL_CYCLES=1024

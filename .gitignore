@@ -1,0 +1,92 @@
+# ============================================================
+#  MoInk-APP —— 不入库清单
+#  原则：只提交「源 + 配置模板 + 文档 + 验证证据」，
+#        构建产物、二进制、日志、本机环境一律忽略。
+# ============================================================
+
+# ---------- 1. ESP-IDF 构建输出（当前约 310 MB）----------
+build/
+build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+flash_args
+flash_project_args
+flash_bootloader_args
+flash_app_args
+flasher_args.json
+project_elf_src_*.c
+ldgen_libraries
+kconfigs.in
+kconfigs_projbuild.in
+
+# ---------- 2. sdkconfig（本机生成；模板 sdkconfig.defaults 要入库）----------
+sdkconfig
+sdkconfig.old
+sdkconfig.*.old
+sdkconfig.*.bak
+
+# ---------- 3. ESP-IDF 组件管理器 ----------
+managed_components/
+# dependencies.lock 需入库，用于锁定组件版本
+
+# ---------- 4. 编译/烧录二进制 ----------
+# 包括 firmware/<版本>/*.bin 这类发布包产物（约 4.5 MB），走 GitHub Releases 发布
+*.bin
+*.elf
+*.map
+*.uf2
+
+# ---------- 5. 验证/构建日志（证据类 .md / .json 仍入库）----------
+*.log
+validation/*.log
+
+# ---------- 6. Python ----------
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+.coverage
+htmlcov/
+
+# ---------- 7. Node / TypeScript 侧 ----------
+node_modules/
+*.tsbuildinfo
+dist/
+.npm/
+
+# ---------- 8. 临时目录与残留 ----------
+.tmp-verify/
+.tmp*/
+temp/
+tmp/
+*.tmp
+*.bak
+*.orig
+*~
+*.swp
+
+# ---------- 9. IDE / 操作系统 ----------
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 10. 本机敏感文件（防误传凭证）----------
+.env
+.env.*
+!.env.example
+secrets.h
+*.pem
+*.key
+*.p12
+*.jks

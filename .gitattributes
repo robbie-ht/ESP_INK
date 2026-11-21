@@ -1,0 +1,30 @@
+# 仓库内统一 LF；Windows 检出也保持 LF（ESP-IDF / CMake / shell 均可接受）
+* text=auto eol=lf
+
+# 跨平台脚本必须 LF，否则 WSL / Git Bash 下会报 $'\r': command not found
+*.sh          text eol=lf
+*.py          text eol=lf
+*.ts          text eol=lf
+*.c           text eol=lf
+*.h           text eol=lf
+*.cpp         text eol=lf
+*.md          text eol=lf
+*.json        text eol=lf
+*.csv         text eol=lf
+*.txt         text eol=lf
+*.defaults    text eol=lf
+*.cmake       text eol=lf
+CMakeLists.txt text eol=lf
+
+# 二进制，禁止任何换行/合并处理
+*.bin         binary
+*.elf         binary
+*.png         binary
+*.jpg         binary
+*.jpeg        binary
+*.pdf         binary
+*.zip         binary
+
+# 生成文件在 diff / 语言统计里降噪
+sdkconfig.defaults linguist-documentation
+validation/*.json  linguist-generated
